@@ -14,23 +14,29 @@ class BasePath(object):
         max_radius = max(x, cx, y, cy)
         out = set()
         radius = 1
+
         while not out:
             if radius >= max_radius:
                 break
-            left_line = [(max(0, x-radius),
-                          max(0, min(y-radius + i, self.max_y))
-                          ) for i in range(2*radius + 1)]
-            right_line = [(min(self.max_x, x+radius),
-                          max(0, min(y-radius + i, self.max_y))
-                           ) for i in range(2*radius + 1)]
-            top_line = [(max(0, min(x-radius + i, self.max_x)),
-                         max(y-radius, 0)
-                         ) for i in range(2*radius + 1)]
-            bottom_line = [(max(0, min(x-radius + i, self.max_x)),
-                            min(y+radius, self.max_y)
-                            ) for i in range(2*radius + 1)]
-            square_neighbors = set(
-                left_line + right_line + top_line + bottom_line)
+
+            diff_x = x - radius
+            diff_y = y - radius
+            sum_x = x + radius
+            sum_y = y + radius
+            square_neighbors = set()
+            for i in range(2 * radius + 1):
+                max_x_radius = max(0, min(diff_x + i, self.max_x))
+                max_y_radius = max(0, min(diff_y + i, self.max_y))
+
+                square_neighbors.update(
+                    (
+                        (max(0, diff_x), max_y_radius),
+                        (min(self.max_x, sum_x), max_y_radius),
+                        (max_x_radius, max(diff_y, 0)),
+                        (max_x_radius, min(sum_y, self.max_y)),
+                    )
+                )
+
             out = square_neighbors.difference(used_points)
             radius += 1
         return out
@@ -57,9 +63,12 @@ class EPWTPath(BasePath):
             cur_point = next_point
         return out
 
+
 class ProbabilisticPath(BasePath):
     def get_path(self, rule=None):
-        if rule is None: rule = bin(random.randint(0,2**12))[2:]
+        if rule is None:
+            # TODO unused variable
+            rule = bin(random.randint(0, 2**12))[2:]
         x, y = random.randint(0, self.max_x), random.randint(0, self.max_y)
         cur_point = (x, y)
         out = [cur_point]
@@ -70,10 +79,10 @@ class ProbabilisticPath(BasePath):
                 break
             neighbors = tuple(neighbors)
             weights = np.zeros(len(neighbors))
-            for idx,n in enumerate(neighbors):
+            for idx, n in enumerate(neighbors):
                 weights[idx] = self.mask[n]
             if np.sum(weights**2) == 0:
-                weights[random.randint(0,len(neighbors) - 1)] = 1
+                weights[random.randint(0, len(neighbors) - 1)] = 1
             next_point = random.choices(neighbors, weights=weights, k=1).pop()
             out.append(next_point)
             used_points.add(next_point)
@@ -81,4 +90,4 @@ class ProbabilisticPath(BasePath):
         return out
 
 
-PATHS = (EPWTPath,ProbabilisticPath)
+PATHS = (EPWTPath, ProbabilisticPath)
